@@ -18,7 +18,7 @@ import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 // 1. CONFIGURATION & UTILS
 // ==========================================
 
-const apiKey = ""; // ដក API Key ចេញ ដើម្បីសុវត្ថិភាព និងប្រើត្រឹម Local Cache
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY; 
 
 let app, auth, db, appId;
 try {
@@ -2840,15 +2840,25 @@ const ChatBot = ({ messages, setMessages, isDarkMode }) => {
       setLoading(true);
       
       try {
-          // បន្ថែម Delay បន្តិច (600ms) ដើម្បីឱ្យការឆ្លើយតបមើលទៅធម្មជាតិដូច AI កំពុងគិត
-          await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 400));
+          // ទាញយកចម្លើយពី Local Knowledge Base ជាមុនសិន
+          let response = findAIResponse(msg, messages);
           
-          // ទាញយកចម្លើយពី Local Knowledge Base និងបញ្ជូនប្រវត្តិឆាត (messages) ទៅជាមួយ
-          const response = findAIResponse(msg, messages);
+          // បើរកមិនឃើញចម្លើយ (ចេញសារ Fallback) យើងហៅ Gemini API មកជួយគិត
+          if (LONG_FALLBACK_RESPONSES.includes(response) || SHORT_FALLBACK_RESPONSES.includes(response)) {
+              // System Instruction ប្រាប់ឱ្យ Gemini ដើរតួជាអ្នកជំនាញ
+              const systemInstruction = "អ្នកគឺជាជំនួយការ AI ឈ្មោះ 'My Design' ឯកទេសខាងផ្នែកថតរូប (Photography) និងកម្មវិធីកែរូបភាព Lightroom តែប៉ុណ្ណោះ។ គោលការណ៍តឹងរ៉ឹងបំផុត៖ ប្រសិនបើសំណួររបស់ User មិនទាក់ទងនឹងការថតរូប, កាមេរ៉ា, ឬការកែរូបភាពទេ អ្នកត្រូវតែបដិសេធមិនឆ្លើយជាដាច់ខាត ដោយឆ្លើយតបយ៉ាងគួរសមថា 'សុំទោសបងបាទ! ខ្ញុំអាចជួយឆ្លើយបានតែសំណួរដែលទាក់ទងនឹងការថតរូប និងកែរូបភាពប៉ុណ្ណោះ។'។ ហាមឆ្លើយសំណួរទូទៅ, ហាមសរសេរកូដ, និងហាមប្រាប់ពីប្រធានបទផ្សេងៗជាដាច់ខាត។ សូមឆ្លើយជាភាសាខ្មែរយ៉ាងរាក់ទាក់ និងខ្លីខ្លឹមសារ។";
+              
+              // ហៅ Gemini (មាន Cache រួចស្រាប់នៅក្នុង function callGemini)
+              response = await callGemini(msg, systemInstruction);
+          } else {
+              // បើមានក្នុង Local Database ឱ្យ delay បន្តិចដើម្បីមើលទៅដូចជាវាកំពុងគិត
+              await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 400));
+          }
           
           setMessages(prev => [...prev, { role: 'model', text: response }]);
       } catch (error) {
-          setMessages(prev => [...prev, { role: 'model', text: "សុំទោសបងបាទ! មានបញ្ហាបច្ចេកទេសបន្តិចបន្តួច។ សូមសាកល្បងម្ដងទៀត! 🛠️" }]);
+          console.error(error);
+          setMessages(prev => [...prev, { role: 'model', text: "សុំទោសបងបាទ! ប្រព័ន្ធ API កំពុងរវល់ ឬមានបញ្ហាបន្តិចបន្តួច។ សូមសាកល្បងម្ដងទៀត! 🛠️" }]);
       } finally {
           setLoading(false);
       }
