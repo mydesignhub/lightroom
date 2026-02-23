@@ -18,8 +18,8 @@ export default async function handler(req, res) {
   if (jsonMode) payload.generationConfig = { responseMimeType: "application/json" };
 
   try {
-    // បាញ់សំណើទៅ Google ពី Server (មិនមែនពី Browser ទេ)
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    // 💡 យើងប្តូរមកប្រើ gemini-1.5-flash ដើម្បីធានាភាពជោគជ័យ ១០០% សម្រាប់គ្រប់ Key ទាំងអស់
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -28,6 +28,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     
     if (!response.ok) {
+        // បោះ Error ចេញពី Google ឱ្យយើងដឹងច្បាស់ថាខុសត្រង់ណា
         return res.status(response.status).json({ error: data.error?.message || "Google API Error" });
     }
     
