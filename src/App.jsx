@@ -110,22 +110,20 @@ const callGemini = async (prompt, systemInstruction = "", jsonMode = false) => {
   const cacheKey = prompt + (jsonMode ? "_json" : "");
   if (responseCache[cacheKey]) return responseCache[cacheKey];
 
-  const model = "gemini-2.5-flash-preview-09-2025";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  
-  const payload = {
-    contents: [{ parts: [{ text: prompt }] }],
-    systemInstruction: { parts: [{ text: systemInstruction }] },
-    generationConfig: jsonMode ? { responseMimeType: "application/json" } : {}
-  };
-
   try {
-    const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    // 🚀 បាញ់សំណើទៅកាន់ Proxy Server របស់យើង (api/chat.js) ជំនួសអោយការហៅទៅ Google ផ្ទាល់
+    const response = await fetch('/api/chat', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ prompt, systemInstruction, jsonMode }) 
+    });
+    
     if (!response.ok) throw new Error("Network response was not ok"); 
 
     const data = await response.json();
-    let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    let text = data.text; // ទាញយកអត្ថបទដែល Server chat.js ឆ្លើយតបមកវិញ
     let result = text;
+    
     if (jsonMode && text) {
         text = text.replace(/```json/g, '').replace(/```/g, '').trim();
         result = JSON.parse(text);
